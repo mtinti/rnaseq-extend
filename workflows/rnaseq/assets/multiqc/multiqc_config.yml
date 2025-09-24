@@ -27,6 +27,8 @@ report_section_order:
     order: 3000
   hisat2:
     order: 3000
+  bowtie2:
+    order: 3000
   # Post-alignment QC
   samtools:
     order: 3000
@@ -87,6 +89,7 @@ run_modules:
   - sortmerna
   - star
   - hisat2
+  - bowtie2
   - rsem
   - umitools
   - salmon
@@ -115,6 +118,7 @@ module_order:
       info: "This section of the report shows FastQC results after adapter trimming."
       path_filters:
         - "*_trimmed*fastqc.zip"
+  - bowtie2
 
 # Don't show % Dups in the General Stats table (we have this from Picard)
 table_columns_visible:
@@ -146,6 +150,8 @@ sp:
 
   hisat2:
     fn: "*.hisat2.summary.log"
+  bowtie2:
+    fn: "*.bowtie2.summary.log"
 
   salmon/meta:
     fn: "meta_info.json"

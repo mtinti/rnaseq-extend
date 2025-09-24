@@ -1,0 +1,77 @@
+name: bowtie2_align
+description: Align RNA-Seq reads to a reference with Bowtie2
+keywords:
+  - align
+  - fasta
+  - genome
+  - reference
+  - bowtie2
+tools:
+  - bowtie2:
+      description: Bowtie2 is a fast and sensitive gapped read aligner designed for mapping next-generation sequencing reads to long reference sequences.
+      homepage: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+      documentation: http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml
+      doi: "10.1038/nmeth.1923"
+      licence: ["GPL v3"]
+      identifier: biotools:bowtie2
+input:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. [ id:'test', single_end:false ]
+    - reads:
+        type: file
+        description: |
+          List of input FastQ files of size 1 and 2 for single-end and paired-end data,
+          respectively.
+  - - meta2:
+        type: map
+        description: |
+          Groovy Map containing reference information
+          e.g. [ id:'genome' ]
+    - index:
+        type: file
+        description: Bowtie2 genome index file
+        pattern: "*.bt2*"
+output:
+  - bam:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*.bam":
+          type: file
+          description: Output BAM file containing read alignments
+          pattern: "*.bam"
+  - summary:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*.log":
+          type: file
+          description: Alignment log
+          pattern: "*.log"
+  - fastq:
+      - meta:
+          type: map
+          description: |
+            Groovy Map containing sample information
+            e.g. [ id:'test', single_end:false ]
+      - "*fastq.gz":
+          type: file
+          description: Output FastQ file containing unaligned reads
+          pattern: "*fastq.gz"
+  - versions:
+      - versions.yml:
+          type: file
+          description: File containing software versions
+          pattern: "versions.yml"
+authors:
+  - "@mattpap"  # placeholder maintainer
+  - "@drpatelh"
+maintainers:
+  - "@mattpap"
