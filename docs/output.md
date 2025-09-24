@@ -666,8 +666,10 @@ The [Preseq](http://smithlabresearch.org/software/preseq/) package is aimed at p
 <summary>Output files</summary>
 
 - `<ALIGNER>/featurecounts/`
-  - `*.featureCounts.txt`: featureCounts biotype-level quantification results for each sample.
-  - `*.featureCounts.txt.summary`: featureCounts summary file containing overall statistics about the counts.
+- `*.featureCounts.txt`: featureCounts biotype-level quantification results for each sample.
+- `*.featureCounts.txt.summary`: featureCounts summary file containing overall statistics about the counts.
+- `<OUTDIR>/bowtie2/featurecounts_gene/*featureCounts.tsv`: Gene-level featureCounts results generated when running `--aligner bowtie2`. Each sample receives two tables suffixed with `.gene_all.featureCounts.tsv` (all alignments) and `.gene_unique.featureCounts.tsv` (reads filtered by `--featurecounts_min_mapping_quality`).
+- `<OUTDIR>/bowtie2/featurecounts_gene/*featureCounts.tsv.summary`: Corresponding summary files for the Bowtie2 gene-level tables.
   - `*_mqc.tsv`: MultiQC custom content files used to plot biotypes in report.
 
 </details>

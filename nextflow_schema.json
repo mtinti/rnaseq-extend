@@ -138,6 +138,13 @@
                     "fa_icon": "fas fa-bezier-curve",
                     "description": "Path to directory or tar.gz archive for pre-built STAR index."
                 },
+                "bowtie2_index": {
+                    "type": "string",
+                    "format": "path",
+                    "exists": true,
+                    "fa_icon": "fas fa-bezier-curve",
+                    "description": "Path to directory or tar.gz archive for pre-built Bowtie2 index."
+                },
                 "hisat2_index": {
                     "type": "string",
                     "format": "path",
@@ -199,6 +206,20 @@
                     "default": "gene_biotype",
                     "fa_icon": "fas fa-layer-group",
                     "description": "The attribute type used to group feature types in the GTF file when generating the biotype plot with featureCounts."
+                },
+                "featurecounts_min_mapping_quality": {
+                    "type": "integer",
+                    "default": 3,
+                    "minimum": 0,
+                    "fa_icon": "fas fa-filter",
+                    "description": "Minimum mapping quality used to generate Bowtie2 unique-read featureCounts tables."
+                },
+                "featurecounts_extra_args": {
+                    "type": "string",
+                    "default": "",
+                    "fa_icon": "fas fa-terminal",
+                    "description": "Additional arguments supplied to Bowtie2 gene-level featureCounts runs.",
+                    "help_text": "Leave empty to use defaults or provide a string of extra flags such as '-M'."
                 },
                 "featurecounts_feature_type": {
                     "type": "string",
@@ -384,9 +405,9 @@
                 "aligner": {
                     "type": "string",
                     "default": "star_salmon",
-                    "description": "Specifies the alignment algorithm to use - available options are 'star_salmon', 'star_rsem' and 'hisat2'.",
+                    "description": "Specifies the alignment algorithm to use - available options are 'star_salmon', 'star_rsem', 'hisat2' and 'bowtie2'.",
                     "fa_icon": "fas fa-map-signs",
-                    "enum": ["star_salmon", "star_rsem", "hisat2"]
+                    "enum": ["star_salmon", "star_rsem", "hisat2", "bowtie2"]
                 },
                 "use_sentieon_star": {
                     "type": "boolean",

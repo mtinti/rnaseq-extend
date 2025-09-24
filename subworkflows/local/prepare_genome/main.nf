@@ -14,6 +14,7 @@ include { UNTAR as UNTAR_SORTMERNA_INDEX    } from '../../../modules/nf-core/unt
 include { UNTAR as UNTAR_STAR_INDEX         } from '../../../modules/nf-core/untar'
 include { UNTAR as UNTAR_RSEM_INDEX         } from '../../../modules/nf-core/untar'
 include { UNTAR as UNTAR_HISAT2_INDEX       } from '../../../modules/nf-core/untar'
+include { UNTAR as UNTAR_BOWTIE2_INDEX      } from '../../../modules/nf-core/untar'
 include { UNTAR as UNTAR_SALMON_INDEX       } from '../../../modules/nf-core/untar'
 include { UNTAR as UNTAR_KALLISTO_INDEX     } from '../../../modules/nf-core/untar'
 
@@ -25,6 +26,7 @@ include { SORTMERNA as SORTMERNA_INDEX      } from '../../../modules/nf-core/sor
 include { STAR_GENOMEGENERATE               } from '../../../modules/nf-core/star/genomegenerate'
 include { HISAT2_EXTRACTSPLICESITES         } from '../../../modules/nf-core/hisat2/extractsplicesites'
 include { HISAT2_BUILD                      } from '../../../modules/nf-core/hisat2/build'
+include { BOWTIE2_BUILD                     } from '../../../modules/nf-core/bowtie2/build'
 include { SALMON_INDEX                      } from '../../../modules/nf-core/salmon/index'
 include { KALLISTO_INDEX                    } from '../../../modules/nf-core/kallisto/index'
 include { RSEM_PREPAREREFERENCE as RSEM_PREPAREREFERENCE_GENOME } from '../../../modules/nf-core/rsem/preparereference'
@@ -53,6 +55,7 @@ workflow PREPARE_GENOME {
     rsem_index               // directory: /path/to/rsem/index/
     salmon_index             // directory: /path/to/salmon/index/
     kallisto_index           // directory: /path/to/kallisto/index/
+    bowtie2_index            // directory: /path/to/bowtie2/index/
     hisat2_index             // directory: /path/to/hisat2/index/
     bbsplit_index            // directory: /path/to/bbsplit/index/
     sortmerna_index          // directory: /path/to/sortmerna/index/
@@ -376,8 +379,29 @@ workflow PREPARE_GENOME {
         }
     }
 
+    //---------------------------------------------------------
+    // 14) Bowtie2 index -> needs FASTA if built
+    //---------------------------------------------------------
+    ch_bowtie2_index = Channel.empty()
+    if ('bowtie2' in prepare_tool_indices) {
+        if (bowtie2_index) {
+            if (bowtie2_index.endsWith('.tar.gz')) {
+                ch_bowtie2_index = UNTAR_BOWTIE2_INDEX ([ [:], file(bowtie2_index, checkIfExists: true) ]).untar.map { it[1] }
+                ch_versions      = ch_versions.mix(UNTAR_BOWTIE2_INDEX.out.versions)
+            } else {
+                ch_bowtie2_index = Channel.value(file(bowtie2_index, checkIfExists: true))
+            }
+        }
+        else if (fasta_provided) {
+            ch_bowtie2_index = BOWTIE2_BUILD(
+                ch_fasta.map { [ [:], it ] }
+            ).index.map { it[1] }
+            ch_versions = ch_versions.mix(BOWTIE2_BUILD.out.versions)
+        }
+    }
+
     //------------------------------------------------------
-    // 14) Salmon index -> can skip genome if transcript_fasta is enough
+    // 15) Salmon index -> can skip genome if transcript_fasta is enough
     //------------------------------------------------------
 
     ch_salmon_index = Channel.empty()
@@ -402,7 +426,7 @@ workflow PREPARE_GENOME {
     }
 
     //--------------------------------------------------
-    // 15) Kallisto index -> only needs transcript FASTA
+    // 16) Kallisto index -> only needs transcript FASTA
     //--------------------------------------------------
     ch_kallisto_index = Channel.empty()
     if (kallisto_index) {
@@ -435,6 +459,7 @@ workflow PREPARE_GENOME {
     sortmerna_index  = ch_sortmerna_index        // channel: path(sortmerna/index/)
     star_index       = ch_star_index             // channel: path(star/index/)
     rsem_index       = ch_rsem_index             // channel: path(rsem/index/)
+    bowtie2_index    = ch_bowtie2_index          // channel: path(bowtie2/index/)
     hisat2_index     = ch_hisat2_index           // channel: path(hisat2/index/)
     salmon_index     = ch_salmon_index           // channel: path(salmon/index/)
     kallisto_index   = ch_kallisto_index         // channel: [ meta, path(kallisto/index/) ]

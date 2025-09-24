@@ -17,8 +17,9 @@ include { MULTIQC_CUSTOM_BIOTYPE             } from '../../modules/local/multiqc
 //
 include { ALIGN_STAR                            } from '../../subworkflows/local/align_star'
 include { QUANTIFY_RSEM                         } from '../../subworkflows/local/quantify_rsem'
-include { BAM_DEDUP_UMI as BAM_DEDUP_UMI_STAR   } from '../../subworkflows/nf-core/bam_dedup_umi'
-include { BAM_DEDUP_UMI as BAM_DEDUP_UMI_HISAT2 } from '../../subworkflows/nf-core/bam_dedup_umi'
+include { BAM_DEDUP_UMI as BAM_DEDUP_UMI_STAR    } from '../../subworkflows/nf-core/bam_dedup_umi'
+include { BAM_DEDUP_UMI as BAM_DEDUP_UMI_HISAT2  } from '../../subworkflows/nf-core/bam_dedup_umi'
+include { BAM_DEDUP_UMI as BAM_DEDUP_UMI_BOWTIE2 } from '../../subworkflows/nf-core/bam_dedup_umi'
 
 include { checkSamplesAfterGrouping      } from '../../subworkflows/local/utils_nfcore_rnaseq_pipeline'
 include { multiqcTsvFromList             } from '../../subworkflows/nf-core/fastq_qc_trim_filter_setstrandedness'
@@ -41,6 +42,8 @@ include { PRESEQ_LCEXTRAP            } from '../../modules/nf-core/preseq/lcextr
 include { QUALIMAP_RNASEQ            } from '../../modules/nf-core/qualimap/rnaseq'
 include { STRINGTIE_STRINGTIE        } from '../../modules/nf-core/stringtie/stringtie'
 include { SUBREAD_FEATURECOUNTS      } from '../../modules/nf-core/subread/featurecounts'
+include { SUBREAD_FEATURECOUNTS as SUBREAD_FEATURECOUNTS_GENE } from '../../modules/nf-core/subread/featurecounts'
+include { SUBREAD_FEATURECOUNTS as SUBREAD_FEATURECOUNTS_GENE_UNIQUE } from '../../modules/nf-core/subread/featurecounts'
 include { KRAKEN2_KRAKEN2 as KRAKEN2 } from '../../modules/nf-core/kraken2/kraken2/main'
 include { BRACKEN_BRACKEN as BRACKEN } from '../../modules/nf-core/bracken/bracken/main'
 include { MULTIQC                    } from '../../modules/nf-core/multiqc'
@@ -56,6 +59,7 @@ include { samplesheetToList                } from 'plugin/nf-schema'
 include { paramsSummaryMultiqc             } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML           } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
 include { FASTQ_ALIGN_HISAT2               } from '../../subworkflows/nf-core/fastq_align_hisat2'
+include { FASTQ_ALIGN_BOWTIE2              } from '../../subworkflows/nf-core/fastq_align_bowtie2'
 include { BAM_MARKDUPLICATES_PICARD        } from '../../subworkflows/nf-core/bam_markduplicates_picard'
 include { BAM_RSEQC                        } from '../../subworkflows/nf-core/bam_rseqc'
 include { BEDGRAPH_BEDCLIP_BEDGRAPHTOBIGWIG as BEDGRAPH_BEDCLIP_BEDGRAPHTOBIGWIG_FORWARD } from '../../subworkflows/nf-core/bedgraph_bedclip_bedgraphtobigwig'
@@ -90,6 +94,7 @@ workflow RNASEQ {
     ch_transcript_fasta  // channel: path(transcript.fasta)
     ch_star_index        // channel: path(star/index/)
     ch_rsem_index        // channel: path(rsem/index/)
+    ch_bowtie2_index     // channel: path(bowtie2/index/)
     ch_hisat2_index      // channel: path(hisat2/index/)
     ch_salmon_index      // channel: path(salmon/index/)
     ch_kallisto_index    // channel: [ meta, path(kallisto/index/) ]
@@ -324,6 +329,50 @@ workflow RNASEQ {
     }
 
     //
+    // SUBWORKFLOW: Alignment with Bowtie2
+    //
+    if (!params.skip_alignment && params.aligner == 'bowtie2') {
+        FASTQ_ALIGN_BOWTIE2 (
+            ch_strand_inferred_filtered_fastq,
+            ch_bowtie2_index.map { [ [:], it ] },
+            ch_fasta.map { [ [:], it ] }
+        )
+        ch_genome_bam          = ch_genome_bam.mix(FASTQ_ALIGN_BOWTIE2.out.bam)
+        ch_genome_bam_index    = ch_genome_bam_index.mix(params.bam_csi_index ? FASTQ_ALIGN_BOWTIE2.out.csi : FASTQ_ALIGN_BOWTIE2.out.bai)
+        ch_unprocessed_bams    = ch_genome_bam.map { meta, bam -> [ meta, bam, '' ] }
+        ch_unaligned_sequences = FASTQ_ALIGN_BOWTIE2.out.fastq
+        ch_multiqc_files = ch_multiqc_files.mix(FASTQ_ALIGN_BOWTIE2.out.summary.collect{it[1]})
+
+        ch_versions = ch_versions.mix(FASTQ_ALIGN_BOWTIE2.out.versions)
+
+        if (params.with_umi) {
+
+            BAM_DEDUP_UMI_BOWTIE2(
+                ch_genome_bam.join(ch_genome_bam_index, by: [0]),
+                ch_fasta.map { [ [:], it ] },
+                params.umi_dedup_tool,
+                params.umitools_dedup_stats,
+                params.bam_csi_index,
+                ch_transcriptome_bam,
+                ch_transcript_fasta.map { [ [:], it ] }
+            )
+
+            ch_genome_bam        = BAM_DEDUP_UMI_BOWTIE2.out.bam
+            ch_genome_bam_index  = params.bam_csi_index ? BAM_DEDUP_UMI_BOWTIE2.out.csi : BAM_DEDUP_UMI_BOWTIE2.out.bai
+            ch_versions          = ch_versions.mix(BAM_DEDUP_UMI_BOWTIE2.out.versions)
+
+            ch_multiqc_files = ch_multiqc_files
+                .mix(BAM_DEDUP_UMI_BOWTIE2.out.multiqc_files)
+        } else {
+
+            ch_multiqc_files = ch_multiqc_files
+                .mix(FASTQ_ALIGN_BOWTIE2.out.stats.collect{it[1]})
+                .mix(FASTQ_ALIGN_BOWTIE2.out.flagstat.collect{it[1]})
+                .mix(FASTQ_ALIGN_BOWTIE2.out.idxstats.collect{it[1]})
+        }
+    }
+
+    //
     // SUBWORKFLOW: Alignment with HISAT2
     //
     if (!params.skip_alignment && params.aligner == 'hisat2') {
@@ -495,6 +544,46 @@ workflow RNASEQ {
         )
         ch_multiqc_files = ch_multiqc_files.mix(MULTIQC_CUSTOM_BIOTYPE.out.tsv.collect{it[1]})
         ch_versions = ch_versions.mix(MULTIQC_CUSTOM_BIOTYPE.out.versions.first())
+    }
+
+    //
+    // MODULE: Gene-level featureCounts for Bowtie2 alignments
+    //
+    if (!params.skip_alignment && params.aligner == 'bowtie2') {
+
+        def ch_bowtie_gene_counts_source = ch_genome_bam
+            .combine(ch_gtf)
+            .map { genome_entry, gtf -> [ genome_entry[0], genome_entry[1], gtf ] }
+
+        def ch_bowtie_gene_counts = ch_bowtie_gene_counts_source
+            .map { meta, bam, gtf ->
+                def sample_id = (meta instanceof Map && meta.containsKey('id')) ? meta.id : meta
+                def meta_all = meta instanceof Map ? meta.clone() : meta
+                if (meta_all instanceof Map) {
+                    meta_all.id = "${sample_id}.featurecounts.gene_all"
+                }
+                [ meta_all, [ bam ], gtf ]
+            }
+
+        def ch_bowtie_gene_counts_unique = ch_bowtie_gene_counts_source
+            .map { meta, bam, gtf ->
+                def sample_id = (meta instanceof Map && meta.containsKey('id')) ? meta.id : meta
+                def meta_unique = meta instanceof Map ? meta.clone() : meta
+                if (meta_unique instanceof Map) {
+                    meta_unique.id = "${sample_id}.featurecounts.gene_unique"
+                }
+                [ meta_unique, [ bam ], gtf ]
+            }
+
+        SUBREAD_FEATURECOUNTS_GENE (
+            ch_bowtie_gene_counts
+        )
+        ch_versions = ch_versions.mix(SUBREAD_FEATURECOUNTS_GENE.out.versions.first())
+
+        SUBREAD_FEATURECOUNTS_GENE_UNIQUE (
+            ch_bowtie_gene_counts_unique
+        )
+        ch_versions = ch_versions.mix(SUBREAD_FEATURECOUNTS_GENE_UNIQUE.out.versions.first())
     }
 
     //

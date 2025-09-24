@@ -1,0 +1,67 @@
+name: fastq_align_bowtie2
+description: Align FastQ files against a Bowtie2 genome index and collect sorted BAM outputs with alignment QC statistics
+keywords:
+  - bowtie2
+  - align
+  - samtools
+components:
+  - bowtie2/align
+  - bam_sort_stats_samtools
+input:
+  - reads:
+      type: channel
+      description: Channel containing meta map and list of FastQ files
+      pattern: '[ val(meta), [ reads ] ]'
+  - index:
+      type: channel
+      description: Channel containing Bowtie2 genome index directory
+      pattern: '[ val(meta), path(index) ]'
+  - ch_fasta:
+      type: channel
+      description: Channel containing the reference FASTA used for alignment statistics
+      pattern: '[ val(meta), path(fasta) ]'
+output:
+  - orig_bam:
+      type: channel
+      description: Channel emitting unsorted BAMs directly from Bowtie2
+      pattern: '[ val(meta), path("*.bam") ]'
+  - summary:
+      type: channel
+      description: Alignment log files from Bowtie2
+      pattern: '[ val(meta), path("*.log") ]'
+  - fastq:
+      type: channel
+      description: Optional unaligned FastQ files when saving unaligned reads
+      pattern: '[ val(meta), path("*fastq.gz") ]'
+  - bam:
+      type: channel
+      description: Sorted BAMs produced by Samtools sort
+      pattern: '[ val(meta), path("*.bam") ]'
+  - bai:
+      type: channel
+      description: BAM index files (BAI)
+      pattern: '[ val(meta), path("*.bai") ]'
+  - csi:
+      type: channel
+      description: BAM index files (CSI) when requested
+      pattern: '[ val(meta), path("*.csi") ]'
+  - stats:
+      type: channel
+      description: Samtools stats output
+      pattern: '[ val(meta), path("*.stats") ]'
+  - flagstat:
+      type: channel
+      description: Samtools flagstat output
+      pattern: '[ val(meta), path("*.flagstat") ]'
+  - idxstats:
+      type: channel
+      description: Samtools idxstats output
+      pattern: '[ val(meta), path("*.idxstats") ]'
+  - versions:
+      type: channel
+      description: Files containing software versions
+      pattern: '[ path("versions.yml") ]'
+authors:
+  - "@mattpap"
+maintainers:
+  - "@mattpap"

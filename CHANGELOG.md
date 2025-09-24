@@ -21,6 +21,7 @@ Special thanks to the following for their contributions to the release:
 - [PR #1604](https://github.com/nf-core/rnaseq/pull/1604) - Enable BAM input for RSEM
 - [PR #1605](https://github.com/nf-core/rnaseq/pull/1605) - Fix default for umi_discard_read to prevent validation errors in Platform
 - [PR #1606](https://github.com/nf-core/rnaseq/pull/1606) - Bump version to 3.21.0 ahead of release
+- Add Bowtie2 alignment support with dual gene-level featureCounts tables for all and mapping-quality-filtered reads.
 
 ### Software dependencies
 
